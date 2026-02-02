@@ -21,6 +21,11 @@ export class CreateProductDto {
     @IsOptional()
     slug?: string;
 
+    @IsString({ each: true })
+    @IsArray()
+    @IsOptional()
+    tags: string[];
+
     @IsInt()
     @IsPositive()
     @IsOptional()
