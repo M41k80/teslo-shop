@@ -4,7 +4,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
-import e from 'express';
+import { validate as isUUID } from 'uuid';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
 
 @Injectable()
 export class ProductsService {
@@ -30,21 +31,55 @@ export class ProductsService {
     
   }
 
-  findAll() {
-    return this.productRepository.find({});
+  findAll(paginationDto: PaginationDto) {
+
+    const { limit = 10, offset = 0 } = paginationDto;
+
+    return this.productRepository.find({
+      take: limit,
+      skip: offset
+    });
   }
 
-  async findOne(id: string) {
+  async findOne(term: string) {
 
-    const product = await this.productRepository.findOneBy({ id });
+    let product: Product | null;
+
+    if (isUUID(term)) {
+      product = await this.productRepository.findOne({ where: { id: term } });
+    } else {
+      const queryBuilder = this.productRepository.createQueryBuilder();
+      product = await queryBuilder
+      .where('title ILIKE :title or slug = :slug', { title: term, slug: term.toLowerCase() }).getOne();
+    }
+
+    // const product = await this.productRepository.findOneBy({ id });
     if (!product) {
-      throw new NotFoundException(`Product #${id} not found`);
+      throw new NotFoundException(`Product #${term} not found`);
     }
     return product;
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(id: string, updateProductDto: UpdateProductDto) {
+
+    const product = await this.productRepository.preload({
+      id: id,
+      ...updateProductDto
+  });
+    if (!product) {
+      throw new NotFoundException(`Product #${id} not found`);
+    }
+
+    try{
+      await this.productRepository.save(product);
+      return `product with id ${product.id} updated successfully`;
+    } catch (error) {
+
+      this.handleDBExceptions(error);
+    }
+    
+
+    
   }
 
   async remove(id: string) {
