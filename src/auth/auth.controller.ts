@@ -7,9 +7,10 @@ import { User } from './entities/user.entity';
 import { UseRoleGuard } from './guards/use-role/use-role.guard';
 import { RoleProtected } from './decorators/role-protected/role-protected.decorator';
 import { ValidRoles } from './interfaces';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 
-
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -20,6 +21,9 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'Login User' })
+  @ApiBody({ type: LoginUserDto })
+  @ApiResponse({ status: 200, description: 'Login Successful' })
   loginUser(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);
   }
